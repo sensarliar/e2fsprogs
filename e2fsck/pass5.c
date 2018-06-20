@@ -95,7 +95,7 @@ static void check_inode_bitmap_checksum(e2fsck_t ctx)
 	if (ext2fs_test_ib_dirty(ctx->fs))
 		return;
 
-	nbytes = (size_t)(EXT2_INODES_PER_GROUP(ctx->fs->super) / 8);
+	nbytes = (size_t)((EXT2_INODES_PER_GROUP(ctx->fs->super)+7) / 8);
 	retval = ext2fs_get_mem(ctx->fs->blocksize, &buf);
 	if (retval) {
 		com_err(ctx->program_name, 0, "%s",
@@ -108,14 +108,13 @@ static void check_inode_bitmap_checksum(e2fsck_t ctx)
 		if (ext2fs_bg_flags_test(ctx->fs, i, EXT2_BG_INODE_UNINIT))
 			continue;
 
-		ino_itr = 1 + (i * (nbytes << 3));
+		ino_itr = 1 + (i * EXT2_INODES_PER_GROUP(ctx->fs->super));
 		retval = ext2fs_get_inode_bitmap_range2(ctx->fs->inode_map,
-							ino_itr, nbytes << 3,
+							ino_itr, EXT2_INODES_PER_GROUP(ctx->fs->super),
 							buf);
 		if (retval)
 			break;
-
-		if (ext2fs_inode_bitmap_csum_verify(ctx->fs, i, buf, nbytes))
+		if (ext2fs_inode_bitmap_csum_verify(ctx->fs, i, buf, EXT2_INODES_PER_GROUP(ctx->fs->super) / 8))
 			continue;
 		pctx.group = i;
 		if (!fix_problem(ctx, PR_5_INODE_BITMAP_CSUM_INVALID, &pctx))
